@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="googlebot" content="noindex, nofollow">
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<style type="text/css">
+
+body {
+  font-family: Verdana, Helvetica, sans-serif;
+}
+#itemImg {
+  height: 320px;
+  width: 320px;
+}
+
+#itmDescriptionInp {
+  border: none;
+  background-color: transparent; /* so when not in edit mode, it looks like plain text instead of input text field */
+}
+
+#itemListContainer {
+  width: 500px;
+}
+
+#itemContainer {
+ cursor: default;
+ border: 1px;
+ padding: 15px;
+ margin-bottom: 10px;
+ background-color: #ddd;
+ width: 450px;
+ border-radius: 10px;
+}
+
+#description {
+  font-family: verdana, sans-serif;
+}
+
+.showEdit {
+  display: none;
+}
+
+.hideEdit {
+  display: initial;
+}
+
+
+  </style>
+
+  <title>Exercise 1</title>
+
+<script type='text/javascript'>//<![CDATA[
+window.onload=function(){
+
+$("#addItemBtn").click( function() {
+  setEditStatus(addItem()); // Creates, append and set in edit mode a new item
+  updateItmCount(); // update counter
+}
+)
+
+function addItem () {
+/* 
+************
+Creates a new item into the container and set all click handlers for each button (Edit, Delete, Save, Cancel)
+Also attach event listener for file reading and replacing the image in the item
+************
+*/
+  newItem = $("#itemContainer").clone().wrap('<li />').appendTo("#itemList")
+
+  newItem.find("#editBtn").click(function() {
+    var containerId = $(this).closest(".itemContainer"); 
+    setEditStatus(containerId);
+    containerId.data("oldDesc",containerId.find("#itmDescriptionInp").val());
+    containerId.data("oldImg",containerId.find("#itemImg").attr("src"));
+  })
+
+  newItem.find("#deleteBtn").click(function() {
+    $(this).closest(".itemContainer").remove();
+    refreshTable();
+    updateItmCount();
+    })
+
+  newItem.find("#saveBtn").click(function() {
+    var containerId = $(this).closest(".itemContainer");
+    setViewStatus(containerId);
+    refreshTable();
+    containerId.find("#chgImgBtn").val(null);
+    })
+
+  newItem.find("#cancelBtn").click(function() {
+    var containerId = $(this).closest(".itemContainer");
+    if (containerId.data("oldDesc") == undefined || containerId.data("oldImg") == "") {
+      containerId.remove();
+      updateItmCount();
+    } else {      
+      setViewStatus(containerId);
+      containerId.find("#itmDescriptionInp").val(containerId.data("oldDesc"));
+      containerId.find("#itemImg").attr("src",containerId.data("oldImg"));
+      containerId.find("#chgImgBtn").val(null);
+    }
+    })
+
+  newItem.css("display", "block");
+
+function handleFileSelect(evt) {
+    var files = evt.target.files; // FileList object
+
+    // Loop through the FileList and render image files as thumbnails.
+    for (var i = 0, f; f = files[i]; i++) {
+
+      // Only process image files.
+      if (!f.type.match('image.*')) {
+        continue;
+      }
+      var reader = new FileReader();
+      // Closure to capture the file information.
+      reader.onload = (function(theFile) {
+        return function(e) {
+          $(evt.target).prev("#itemImg").attr("src",e.target.result);
+          $(evt.target).prev("#itemImg").css("display","initial");
+        };
+      })(f);
+
+      // Read in the image file as a data URL.
+      reader.readAsDataURL(f);
+    }
+  }
+
+  newItem.find("#chgImgBtn").on('change',handleFileSelect);
+  return newItem;
+}
+
+function updateItmCount() { // update span with the amount of items within the list container
+  $("#itmCount").text($('#itemListContainer div.itemContainer').length)
+}
+
+function setViewStatus (obj) { // set show/hide status for View Mode
+    obj.find(".showEdit").css("display","none");
+    obj.find(".hideEdit").css("display","initial");
+    obj.find("#itmDescriptionInp")
+    .css( "background-color", "transparent")
+    .attr("readonly","true");
+    return false;
+}
+
+function setEditStatus (obj) { // set show/hide status for Edit Mode
+    obj.find("#itmDescriptionInp")
+    .css( "background-color", "lightgreen")
+    .removeAttr("readonly")
+    .focus();
+
+    obj.find(".showEdit").css("display","initial");
+    obj.find(".hideEdit").css("display","none");
+
+}   
+
+function gen_GUID() { // Generate GUID unique item identifier (just in case, a UID is stored with each item in the DB)
+return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, 
+function(c) 
+{
+    var r = Math.random() * 16|0, v = c == 'x' ? r : (r&0x3|0x8);
+    return v.toString(16);
+});
+}
+
+function initTable () { // creates the table if it doesn't exist
+  db.transaction(function (tx) {
+     tx.executeSql('CREATE TABLE IF NOT EXISTS ItemList (itm_id, itm_desc, itm_imgsrc, itm_ord)');
+  });
+}
+
+function refreshTable () { // truncate the items table and traverse the items list, storing each item as a row in the DB
+    db.transaction(function (tx) {
+       tx.executeSql('DROP TABLE IF EXISTS ItemList');
+    });
+
+    initTable();
+    db.transaction(function (tx) {  
+    $('#itemListContainer div.itemContainer').each(function () {
+    containerId = $(this);
+    var desc = containerId.find("#itmDescriptionInp").val();
+    var imgsrc = containerId.find("#itemImg").attr("src");
+       tx.executeSql('INSERT INTO ItemList (itm_id, itm_desc, itm_imgsrc, itm_ord) VALUES (?, ?, ?, ?)', [gen_GUID(), desc, imgsrc, containerId.index()]);
+    });
+  });
+}
+
+// General functionality and initialization
+
+// Check for File API support
+if (window.File && window.FileReader && window.FileList && window.Blob) {
+} else {
+  alert('The File APIs are not fully supported in this browser.');
+}
+
+var db = openDatabase('exercise_1', '1.0', 'Exercise 1 - Sortable Item List', 4 * 1024 * 1024);
+
+initTable();
+
+
+db.transaction(function (tx) { // retrieve saved items and display them as DOM objects
+   tx.executeSql('SELECT * FROM ItemList', [], function (tx, results) {
+      var len = results.rows.length, i;
+
+      for (i = 0; i < len; i++){
+         var newItem = addItem();
+         newItem.find("#itmDescriptionInp").val(results.rows[i].itm_desc);
+         newItem.find("#itemImg").attr("src",results.rows[i].itm_imgsrc);
+         newItem.find("#itemImg").css("display","initial");
+      }
+      updateItmCount();
+   }, null);
+});
+
+
+// Init sortable functionality, disable selection and update on-screen items counter 
+$("#itemList").sortable({
+  update: refreshTable
+})
+.disableSelection();
+updateItmCount();
+
+}//]]> 
+
+</script>
+
+  
+</head>
+
+<body>
+
+<!-- Item Container -->
+<div class="itemContainer" id="itemContainer" style="display: none;">
+  <div>
+    <img src="" id="itemImg" style="display: none;"><input id="chgImgBtn" class = "showEdit" type="file" accept=".jpg,.jpeg,.gif,.png,image/JPEG,image/GIF,image/PNG"></input>
+  </div>
+  <div id="itmDescription">
+    <input type="text" id="itmDescriptionInp" value = "" readonly="true" maxlength="300" placeholder="Enter the description here">
+  </div>
+  <div id="buttons">
+    <button id="editBtn" class="hideEdit">Edit</button>
+    <button id="deleteBtn" class="hideEdit">Delete</button>
+    <button id="saveBtn" class ="showEdit">Save Changes</button>
+    <button id="cancelBtn" class ="showEdit">Cancel</button>
+  </div>
+</div>
+
+<!-- /Item Container -->
+
+<div id="itemListContainer">
+<h1>
+List of items
+</h1>
+<ul id="itemList">
+</ul>
+<span style="float: right;">Item count: <span id="itmCount"></span></span>
+<br />
+<button id="addItemBtn">Add item!</button>
+</div>
+</body>
+
+</html>
+
