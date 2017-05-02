@@ -26,12 +26,12 @@ IMPORTANT: for trademark reasons; file names, repository name or any other asset
 
 ------
 
-With regards to the above, in order to create a self-packaged application, Web SQL (SQLite) was used as the local DB engine. LocalStorage and a serialised JSON object was also an option, although SQL gives a higher and more flexible scalability. With this approach, a server-side process was avoided.
+With regards to the above, in order to create a self-packaged application, Web SQL (SQLite) was used as the local DB engine. LocalStorage and a serialised JSON object was also an option, although SQL gives a higher and more flexible scalability. With this approach, a server-side process was avoided, thus the image scaling is done via CSS only.
 
 The image is stored as a Base64 encoded string in the items table, as well as the description. Each edit, delete and sort operation refreshes the table so that every change is tracked in real-time. The Data URL functionality has a limitation in IE (not Edge) of 99kb, but this limitation is not significative as for the objective of the exercise. Cancelling a recently created empty-item derives in deleting the item, to avoid orphan/empty items in the list. An empty item can be saved, nonetheless, and the descripcion placeholder will be displayed (this functionality can be changed if requested).
 
 Installation/Run instructions:
 
-1 - On the HTML file in a Web Browser
+1 - Open the HTML file in a Web Browser
 
 -------
